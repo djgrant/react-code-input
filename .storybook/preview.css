@@ -1,0 +1,25 @@
+* {
+  box-sizing: border-box;
+}
+
+input::placeholder {
+  color: #999;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  font-family: monospace;
+  line-height: 19px;
+  letter-spacing: normal;
+  border: none;
+  border-radius: 5px;
+  background: #eee;
+}
+
+.input:focus {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
