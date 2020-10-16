@@ -9,6 +9,16 @@ export const getTokens = (value: string, operators: string[]) => {
   let current = 0;
   while (current < value.length) {
     let char = value[current];
+    if (char === '(') {
+      tokens.push({ type: 'leftParen', value: char });
+      current++;
+      continue;
+    }
+    if (char === ')') {
+      tokens.push({ type: 'rightParen', value: char });
+      current++;
+      continue;
+    }
     if (operators.includes(char)) {
       let seq = '';
       while (operators.includes(char)) {
