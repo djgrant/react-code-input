@@ -10,7 +10,7 @@ There are zero dependencies and you can style the input in any way that you want
 
 ## Quick start
 
-```ts
+```tsx
 import { CodeInput } from '@djgrant/react-code-input';
 
 export default () => (
