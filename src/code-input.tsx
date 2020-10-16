@@ -11,7 +11,7 @@ import { setStyles } from "./utils";
 import { Token, LintedToken } from "./types";
 
 export interface CodeInputProps {
-  customInput?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
+  customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
   style: CSSProperties;
   operators: string[];
   variables: string[];
@@ -19,14 +19,14 @@ export interface CodeInputProps {
 }
 
 export function CodeInput({
-  customInput,
+  customInputComponent,
   style,
   operators = [],
   variables = [],
   onChange,
   ...inputProps
 }: CodeInputProps) {
-  const Input = customInput || "input";
+  const Input = customInputComponent || "input";
   const containerRef = React.createRef<HTMLDivElement>();
   const inputRef = React.createRef<HTMLInputElement>();
   const shadowInputRef = React.createRef<HTMLDivElement>();
