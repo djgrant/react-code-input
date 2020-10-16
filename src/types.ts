@@ -1,5 +1,12 @@
 export interface Token {
-  type: "variable" | "operator" | "number" | "whitespace" | "unknown";
+  type:
+    | "leftParen"
+    | "rightParen"
+    | "variable"
+    | "operator"
+    | "number"
+    | "whitespace"
+    | "unknown";
   value: string;
 }
 
