@@ -14,7 +14,7 @@ export default () => (
     placeholder="price - vat"
     operators={['+', '-', '/', '*']}
     variables={['price', 'vat']}
-    customInput={MyInput}
+    customInputComponent={MyInput}
     styles={{ width: '300px' }}
     onChange={tokens => console.log(tokens)}
   />

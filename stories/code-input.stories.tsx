@@ -53,5 +53,5 @@ const ExampleCustomInput = React.forwardRef<HTMLInputElement>((props, ref) => (
 
 export const CustomComponent = Template.bind({});
 CustomComponent.args = {
-  customInput: ExampleCustomInput,
+  customInputComponent: ExampleCustomInput,
 };
