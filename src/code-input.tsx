@@ -3,11 +3,7 @@ import { CSSProperties } from 'react';
 import { Hints } from './hints';
 import { getTokens, getLintedTokens } from './lexer';
 import { Token, LintedToken } from './types';
-import {
-  getShadowInputStyles,
-  getShadowInputContainerStyles,
-  getContainerStyles,
-} from './styles';
+import { getComputedStyles } from './styles';
 
 export interface CodeInputProps {
   customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
@@ -32,13 +28,18 @@ export function CodeInput({
   const [activeHint, setActiveHint] = React.useState(0);
   const [selectedTokenPosition, setSelectedTokenPosition] = React.useState(0);
   const [scrollPosition, setScrollPosition] = React.useState(0);
-  const [computedStyles, setComputedStyled] = React.useState({
-    container: {},
-    shadowInput: {},
-    shadowInputContainer: {},
-  });
+  const [computedStyles, setComputedStyled] = React.useState(
+    getComputedStyles(null)
+  );
+
   const currentToken = tokens[tokens.length - 1];
   const hints = currentToken?.hints || [];
+
+  React.useEffect(() => {
+    const inputEl = inputRef.current;
+    const computedStyles = getComputedStyles(inputEl);
+    setComputedStyled(computedStyles);
+  }, []);
 
   const handleChange = ({ target }: { target: HTMLInputElement }) => {
     const rawTokens = getTokens(target.value, operators);
@@ -59,20 +60,11 @@ export function CodeInput({
     target.value = completedValue;
     target.scrollLeft = target.scrollWidth;
     setActiveHint(0);
+    handleChange({ target });
   };
 
-  React.useEffect(() => {
-    if (!inputRef.current) return;
-    const inputEl = inputRef.current;
-    setComputedStyled({
-      container: getContainerStyles(inputEl),
-      shadowInput: getShadowInputStyles(inputEl),
-      shadowInputContainer: getShadowInputContainerStyles(inputEl),
-    });
-  }, []);
-
   return (
-    <div style={{ ...styles.container, ...styles.container }}>
+    <div style={{ ...styles.container, ...computedStyles.container }}>
       <Input
         {...inputProps}
         ref={inputRef}
