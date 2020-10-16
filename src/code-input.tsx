@@ -2,13 +2,12 @@ import React, { InputHTMLAttributes } from 'react';
 import { CSSProperties } from 'react';
 import { Hints } from './hints';
 import { getTokens, getLintedTokens } from './lexer';
+import { Token, LintedToken } from './types';
 import {
   getShadowInputStyles,
   getShadowInputContainerStyles,
   getContainerStyles,
 } from './styles';
-import { setStyles } from './utils';
-import { Token, LintedToken } from './types';
 
 export interface CodeInputProps {
   customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
@@ -27,12 +26,17 @@ export function CodeInput({
   ...inputProps
 }: CodeInputProps) {
   const Input = customInputComponent || 'input';
-  const containerRef = React.createRef<HTMLDivElement>();
   const inputRef = React.createRef<HTMLInputElement>();
-  const shadowInputRef = React.createRef<HTMLDivElement>();
-  const shadowInputContainerRef = React.createRef<HTMLDivElement>();
+  const [value, setValue] = React.useState('');
   const [tokens, setTokens] = React.useState<LintedToken[]>([]);
   const [activeHint, setActiveHint] = React.useState(0);
+  const [selectedTokenPosition, setSelectedTokenPosition] = React.useState(0);
+  const [scrollPosition, setScrollPosition] = React.useState(0);
+  const [computedStyles, setComputedStyled] = React.useState({
+    container: {},
+    shadowInput: {},
+    shadowInputContainer: {},
+  });
   const currentToken = tokens[tokens.length - 1];
   const hints = currentToken?.hints || [];
 
@@ -42,48 +46,43 @@ export function CodeInput({
     const usefulTokens = rawTokens.filter(t => t.type !== 'whitespace');
     setTokens(lintedTokens);
     onChange(usefulTokens);
+    setValue(target.value);
   };
 
-  const updateInputValue = (target: HTMLInputElement, hintIndex: number) => {
-    target.value =
+  const completeHint = (target: HTMLInputElement, hintIndex: number) => {
+    const completedValue =
       tokens
         .slice(0, -1)
         .map(t => t.value)
         .join('') + hints[hintIndex];
 
-    handleChange({ target });
-    setActiveHint(0);
+    target.value = completedValue;
     target.scrollLeft = target.scrollWidth;
+    setActiveHint(0);
   };
 
   React.useEffect(() => {
-    if (
-      !containerRef.current ||
-      !inputRef.current ||
-      !shadowInputRef.current ||
-      !shadowInputContainerRef.current
-    ) {
-      return;
-    }
+    if (!inputRef.current) return;
     const inputEl = inputRef.current;
-    setStyles(containerRef.current, getContainerStyles(inputEl));
-    setStyles(shadowInputRef.current, getShadowInputStyles(inputEl));
-    setStyles(
-      shadowInputContainerRef.current,
-      getShadowInputContainerStyles(inputEl)
-    );
+    setComputedStyled({
+      container: getContainerStyles(inputEl),
+      shadowInput: getShadowInputStyles(inputEl),
+      shadowInputContainer: getShadowInputContainerStyles(inputEl),
+    });
   }, []);
 
   return (
-    <div ref={containerRef} style={styles.container}>
+    <div style={{ ...styles.container, ...styles.container }}>
       <Input
         {...inputProps}
         ref={inputRef}
         type="text"
+        value={value}
         spellCheck="false"
         style={{ ...style, ...styles.input }}
         onScroll={e => {
-          (shadowInputRef.current as HTMLDivElement).style.marginLeft = `-${e.currentTarget.scrollLeft}px`;
+          setScrollPosition(e.currentTarget.scrollLeft);
+        }}
         }}
         onKeyDown={e => {
           if (!hints || !hints.length) return;
@@ -101,7 +100,7 @@ export function CodeInput({
           }
           if (enter) {
             e.preventDefault();
-            updateInputValue(e.currentTarget, activeHint);
+            completeHint(e.currentTarget, activeHint);
           }
           if (up) {
             e.preventDefault();
@@ -120,11 +119,19 @@ export function CodeInput({
         onChange={handleChange}
       />
       <div
-        ref={shadowInputContainerRef}
-        style={{ ...styles.shadowInputContainer }}
+        style={{
+          ...styles.shadowInputContainer,
+          ...computedStyles.shadowInputContainer,
+        }}
       >
         <div style={{ overflow: 'hidden' }}>
-          <div ref={shadowInputRef} style={styles.shadowInput}>
+          <div
+            style={{
+              ...styles.shadowInput,
+              ...computedStyles.shadowInput,
+              marginLeft: `-${scrollPosition}px`,
+            }}
+          >
             {tokens.map((token, i) => (
               <div key={`${i}.${token.value}`} style={getTokenStyles(token)}>
                 {token.value === ' ' ? '\u00A0' : token.value}
@@ -138,7 +145,7 @@ export function CodeInput({
           hints={hints}
           activeIndex={activeHint}
           onSelectHint={selectedHintIndex => {
-            updateInputValue(
+            completeHint(
               inputRef.current as HTMLInputElement,
               selectedHintIndex
             );
