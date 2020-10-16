@@ -7,7 +7,7 @@ At present, the component's understanding of code is very naive. I wrote it for 
 ### Quick start
 
 ```ts
-import { CodeInput } from 'react-code-input';
+import { CodeInput } from '@djgrant/react-code-input';
 
 export default () => (
   <CodeInput
