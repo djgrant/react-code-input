@@ -23,7 +23,10 @@ export function Hints({
             ...styles.hint,
             ...(activeIndex === i ? styles.hintActive : {}),
           }}
-          onClick={() => onSelectHint(i)}
+          onMouseDown={e => {
+            e.preventDefault();
+            onSelectHint(i);
+          }}
         >
           {hint}
         </div>

@@ -168,7 +168,7 @@ export function CodeInput({
         spellCheck="false"
         style={{ ...style, ...styles.input }}
         onScroll={e => setScrollPosition(e.currentTarget.scrollLeft)}
-        // onBlur={() => setHints([])}
+        onBlur={() => setHints([])}
         onFocus={handleSelectToken}
         onClick={handleSelectToken}
         onSelect={handleSelectToken}
