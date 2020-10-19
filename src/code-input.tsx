@@ -203,6 +203,7 @@ export function CodeInput({
       </div>
       <div style={styles.hints}>
         <Hints
+          style={computedStyles.hints}
           hints={hints}
           activeIndex={activeHint}
           offset={hintOffset}
