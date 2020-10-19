@@ -1,9 +1,9 @@
-import React, { InputHTMLAttributes } from 'react';
-import { CSSProperties } from 'react';
-import { Hints } from './hints';
-import { getTokens, getLintedTokens } from './lexer';
-import { Token, LintedToken } from './types';
-import { styles, getComputedStyles, getTokenStyles } from './styles';
+import React, { InputHTMLAttributes } from "react";
+import { CSSProperties } from "react";
+import { Hints } from "./hints";
+import { getTokens, getLintedTokens } from "./lexer";
+import { Token, LintedToken } from "./types";
+import { styles, getComputedStyles, getTokenStyles } from "./styles";
 
 export interface CodeInputProps {
   customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
@@ -21,19 +21,20 @@ export function CodeInput({
   onChange,
   ...inputProps
 }: CodeInputProps) {
-  const Input = customInputComponent || 'input';
+  const Input = customInputComponent || "input";
   const inputRef = React.createRef<HTMLInputElement>();
-  const [value, setValue] = React.useState('');
+  const [value, setValue] = React.useState("");
   const [tokens, setTokens] = React.useState<LintedToken[]>([]);
   const [activeHint, setActiveHint] = React.useState(0);
-  const [selectedTokenPosition, setSelectedTokenPosition] = React.useState(0);
+  const [hintOffset, setHintOffset] = React.useState(0);
   const [scrollPosition, setScrollPosition] = React.useState(0);
   const [computedStyles, setComputedStyled] = React.useState(
     getComputedStyles(null)
   );
 
-  const currentToken = tokens[tokens.length - 1];
+  const [currentToken, setCurrentToken] = React.useState<LintedToken>();
   const hints = currentToken?.hints || [];
+  const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
 
   React.useEffect(() => {
     const inputEl = inputRef.current;
@@ -44,22 +45,44 @@ export function CodeInput({
   const handleChange = ({ target }: { target: HTMLInputElement }) => {
     const rawTokens = getTokens(target.value, operators);
     const lintedTokens = getLintedTokens(rawTokens, operators, variables);
-    const usefulTokens = rawTokens.filter(t => t.type !== 'whitespace');
+    const usefulTokens = rawTokens.filter((t) => t.type !== "whitespace");
     setTokens(lintedTokens);
     onChange(usefulTokens);
     setValue(target.value);
+  };
+
+  const handleSelectToken = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const cursorPosition = e.currentTarget.selectionStart;
+    if (!cursorPosition) {
+      setCurrentToken(undefined);
+      return;
+    }
+    let len = 0;
+    for (const token of tokens) {
+      len += token.value.length;
+      if (cursorPosition - 1 < len) {
+        setCurrentToken(token);
+        const tokenIndex = tokens.indexOf(token);
+        const tokenRef = tokenRefs[tokenIndex];
+        const tokenRect = tokenRef.current?.getBoundingClientRect();
+        setHintOffset(tokenRect?.left || 0);
+        return;
+      }
+    }
+    setCurrentToken(undefined);
   };
 
   const completeHint = (target: HTMLInputElement, hintIndex: number) => {
     const completedValue =
       tokens
         .slice(0, -1)
-        .map(t => t.value)
-        .join('') + hints[hintIndex];
+        .map((t) => t.value)
+        .join("") + hints[hintIndex];
 
     target.value = completedValue;
     target.scrollLeft = target.scrollWidth;
     setActiveHint(0);
+    setCurrentToken(undefined);
     handleChange({ target });
   };
 
@@ -72,18 +95,20 @@ export function CodeInput({
         value={value}
         spellCheck="false"
         style={{ ...style, ...styles.input }}
-        onScroll={e => {
+        onScroll={(e) => {
           setScrollPosition(e.currentTarget.scrollLeft);
         }}
-        }}
-        onKeyDown={e => {
+        onClick={handleSelectToken}
+        onSelect={handleSelectToken}
+        onKeyDown={(e) => {
+          handleSelectToken(e);
           if (!hints || !hints.length) return;
           const ctrl = e.ctrlKey;
-          const enter = e.key === 'Enter';
-          const esc = e.key === 'Escape';
-          const up = e.key === 'ArrowUp';
-          const down = e.key === 'ArrowDown';
-          const a = e.key === 'a';
+          const enter = e.key === "Enter";
+          const esc = e.key === "Escape";
+          const up = e.key === "ArrowUp";
+          const down = e.key === "ArrowDown";
+          const a = e.key === "a";
           if (ctrl && a) {
             // show hints
           }
@@ -116,7 +141,7 @@ export function CodeInput({
           ...computedStyles.shadowInputContainer,
         }}
       >
-        <div style={{ overflow: 'hidden' }}>
+        <div style={{ overflow: "hidden" }}>
           <div
             style={{
               ...styles.shadowInput,
@@ -125,8 +150,12 @@ export function CodeInput({
             }}
           >
             {tokens.map((token, i) => (
-              <div key={`${i}.${token.value}`} style={getTokenStyles(token)}>
-                {token.value === ' ' ? '\u00A0' : token.value}
+              <div
+                key={`${i}.${token.value}`}
+                ref={tokenRefs[i]}
+                style={getTokenStyles(token)}
+              >
+                {token.value === " " ? "\u00A0" : token.value}
               </div>
             ))}
           </div>
@@ -136,7 +165,8 @@ export function CodeInput({
         <Hints
           hints={hints}
           activeIndex={activeHint}
-          onSelectHint={selectedHintIndex => {
+          offset={hintOffset}
+          onSelectHint={(selectedHintIndex) => {
             completeHint(
               inputRef.current as HTMLInputElement,
               selectedHintIndex

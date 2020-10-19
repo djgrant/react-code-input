@@ -1,15 +1,21 @@
-import React from "react";
+import React, { CSSProperties } from "react";
 
 interface HintsProps {
   hints: string[];
   activeIndex: number;
+  offset: number;
   onSelectHint: (index: number) => any;
 }
 
-export function Hints({ hints, activeIndex, onSelectHint }: HintsProps) {
+export function Hints({
+  hints,
+  activeIndex,
+  offset,
+  onSelectHint,
+}: HintsProps) {
   if (!hints.length) return null;
   return (
-    <div style={styles.hints}>
+    <div style={styles.hints(offset)}>
       {hints.map((hint, i) => (
         <div
           key={i}
@@ -27,14 +33,16 @@ export function Hints({ hints, activeIndex, onSelectHint }: HintsProps) {
 }
 
 const styles = {
-  hints: {
+  hints: (offset: number): CSSProperties => ({
     background: "white",
     color: "black",
     display: "inline-block",
     fontSize: 12,
     fontFamily: "monospace",
-    minWidth: "100%",
-  },
+    minWidth: "150px",
+    position: "fixed",
+    left: `${offset}px`,
+  }),
   hint: {
     padding: "10px 8px",
     border: "1px solid #ddd",
