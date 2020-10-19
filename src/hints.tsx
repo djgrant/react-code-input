@@ -5,6 +5,7 @@ interface HintsProps {
   activeIndex: number;
   offset: number;
   onSelectHint: (index: number) => any;
+  style: CSSProperties;
 }
 
 export function Hints({
@@ -12,10 +13,11 @@ export function Hints({
   activeIndex,
   offset,
   onSelectHint,
+  style,
 }: HintsProps) {
   if (!hints.length) return null;
   return (
-    <div style={styles.hints(offset)}>
+    <div style={{ ...styles.hints(offset), ...style }}>
       {hints.map((hint, i) => (
         <div
           key={i}
