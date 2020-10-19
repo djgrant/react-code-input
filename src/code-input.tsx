@@ -10,8 +10,12 @@ export interface CodeInputProps {
   style: CSSProperties;
   operators: string[];
   variables: string[];
-  onChange: (tokens: Token[]) => any;
+  onChange: (params: { tokens: Token[]; value: string }) => any;
 }
+
+const initialTokens: LintedToken[] = [
+  { type: "unknown", value: "", valid: false },
+];
 
 export function CodeInput({
   customInputComponent,
@@ -22,9 +26,9 @@ export function CodeInput({
   ...inputProps
 }: CodeInputProps) {
   const Input = customInputComponent || "input";
-  const inputRef = React.createRef<HTMLInputElement>();
-  const [value, setValue] = React.useState("");
-  const [tokens, setTokens] = React.useState<LintedToken[]>([]);
+  const [tokens, setTokens] = React.useState(initialTokens);
+  const [activeToken, setActiveToken] = React.useState<LintedToken | null>();
+  const [hints, setHints] = React.useState<string[]>([]);
   const [activeHint, setActiveHint] = React.useState(0);
   const [hintOffset, setHintOffset] = React.useState(0);
   const [scrollPosition, setScrollPosition] = React.useState(0);
@@ -32,8 +36,7 @@ export function CodeInput({
     getComputedStyles(null)
   );
 
-  const [currentToken, setCurrentToken] = React.useState<LintedToken>();
-  const hints = currentToken?.hints || [];
+  const inputRef = React.createRef<HTMLInputElement>();
   const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
 
   React.useEffect(() => {
@@ -47,42 +50,112 @@ export function CodeInput({
     const lintedTokens = getLintedTokens(rawTokens, operators, variables);
     const usefulTokens = rawTokens.filter((t) => t.type !== "whitespace");
     setTokens(lintedTokens);
-    onChange(usefulTokens);
-    setValue(target.value);
+    onChange({ tokens: usefulTokens, value: target.value });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const ctrl = e.ctrlKey;
+    const enter = e.key === "Enter";
+    const space = e.key === " ";
+    const esc = e.key === "Escape";
+    const up = e.key === "ArrowUp";
+    const down = e.key === "ArrowDown";
+    const scrollingHints = up || down;
+
+    if (ctrl && space && !hints.length) {
+      handleSelectToken(e);
+      setHints(variables);
+    }
+    if (!hints.length) {
+      return;
+    }
+    if (esc) {
+      setHints([]);
+    }
+    if (enter && hints) {
+      e.preventDefault();
+      completeHint(e.currentTarget, activeHint);
+    }
+    if (up) {
+      e.preventDefault();
+      const nextIndex = activeHint - 1;
+      const min = 0;
+      const max = hints.length - 1;
+      setActiveHint(nextIndex < min ? max : nextIndex);
+    }
+    if (down) {
+      e.preventDefault();
+      const nextIndex = activeHint + 1;
+      const max = hints.length - 1;
+      setActiveHint(nextIndex > max ? 0 : nextIndex);
+    }
+    if (!scrollingHints) {
+      handleSelectToken(e);
+    }
   };
 
   const handleSelectToken = (e: React.SyntheticEvent<HTMLInputElement>) => {
-    const cursorPosition = e.currentTarget.selectionStart;
-    if (!cursorPosition) {
-      setCurrentToken(undefined);
-      return;
-    }
+    const cursorPosition = e.currentTarget.selectionStart || 0;
+
+    let newActiveToken: LintedToken | null = null;
     let len = 0;
     for (const token of tokens) {
       len += token.value.length;
       if (cursorPosition - 1 < len) {
-        setCurrentToken(token);
-        const tokenIndex = tokens.indexOf(token);
-        const tokenRef = tokenRefs[tokenIndex];
-        const tokenRect = tokenRef.current?.getBoundingClientRect();
-        setHintOffset(tokenRect?.left || 0);
-        return;
+        newActiveToken = token;
+        break;
       }
     }
-    setCurrentToken(undefined);
+    if (!newActiveToken) return;
+    const tokenIndex = tokens.indexOf(newActiveToken);
+    const tokenRef = tokenRefs[tokenIndex];
+    const tokenRect = tokenRef.current?.getBoundingClientRect();
+    setActiveToken(newActiveToken);
+    setHintOffset(tokenRect?.left || 0);
+    if (newActiveToken.hints) {
+      setHints(newActiveToken.hints);
+    } else {
+      setHints([]);
+    }
   };
 
   const completeHint = (target: HTMLInputElement, hintIndex: number) => {
-    const completedValue =
-      tokens
-        .slice(0, -1)
-        .map((t) => t.value)
-        .join("") + hints[hintIndex];
+    const emptyInput = target.value.length === 0;
 
+    let newCursorPosition = 0;
+    let completedValue = "";
+    let foundActiveToken = false;
+    for (const token of tokens) {
+      let newToken;
+      if (token !== activeToken) {
+        newToken = token.value;
+      } else if (token.type !== "variable") {
+        newToken = token.value + hints[hintIndex];
+      } else {
+        newToken = hints[hintIndex];
+      }
+      if (!foundActiveToken) {
+        newCursorPosition += newToken.length;
+      }
+      if (token === activeToken) {
+        foundActiveToken = true;
+      }
+      completedValue += newToken;
+    }
+
+    if (emptyInput) {
+      completedValue = hints[hintIndex];
+      newCursorPosition = completedValue.length;
+    }
+
+    // @todo: enable undo/redo state
     target.value = completedValue;
     target.scrollLeft = target.scrollWidth;
+    target.selectionStart = newCursorPosition;
+    target.selectionEnd = newCursorPosition;
+
     setActiveHint(0);
-    setCurrentToken(undefined);
+    setHints([]);
     handleChange({ target });
   };
 
@@ -92,47 +165,14 @@ export function CodeInput({
         {...inputProps}
         ref={inputRef}
         type="text"
-        value={value}
         spellCheck="false"
         style={{ ...style, ...styles.input }}
-        onScroll={(e) => {
-          setScrollPosition(e.currentTarget.scrollLeft);
-        }}
+        onScroll={(e) => setScrollPosition(e.currentTarget.scrollLeft)}
+        // onBlur={() => setHints([])}
+        onFocus={handleSelectToken}
         onClick={handleSelectToken}
         onSelect={handleSelectToken}
-        onKeyDown={(e) => {
-          handleSelectToken(e);
-          if (!hints || !hints.length) return;
-          const ctrl = e.ctrlKey;
-          const enter = e.key === "Enter";
-          const esc = e.key === "Escape";
-          const up = e.key === "ArrowUp";
-          const down = e.key === "ArrowDown";
-          const a = e.key === "a";
-          if (ctrl && a) {
-            // show hints
-          }
-          if (esc) {
-            // hide hints
-          }
-          if (enter) {
-            e.preventDefault();
-            completeHint(e.currentTarget, activeHint);
-          }
-          if (up) {
-            e.preventDefault();
-            const nextIndex = activeHint - 1;
-            const min = 0;
-            const max = hints.length - 1;
-            setActiveHint(nextIndex < min ? max : nextIndex);
-          }
-          if (down) {
-            e.preventDefault();
-            const nextIndex = activeHint + 1;
-            const max = hints.length - 1;
-            setActiveHint(nextIndex > max ? 0 : nextIndex);
-          }
-        }}
+        onKeyDown={handleKeyDown}
         onChange={handleChange}
       />
       <div
@@ -166,11 +206,8 @@ export function CodeInput({
           hints={hints}
           activeIndex={activeHint}
           offset={hintOffset}
-          onSelectHint={(selectedHintIndex) => {
-            completeHint(
-              inputRef.current as HTMLInputElement,
-              selectedHintIndex
-            );
+          onSelectHint={(activeHintIndex) => {
+            completeHint(inputRef.current as HTMLInputElement, activeHintIndex);
           }}
         />
       </div>
