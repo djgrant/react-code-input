@@ -23,6 +23,7 @@ export const styles: Record<string, CSSProperties> = {
   input: {
     color: 'transparent',
     caretColor: 'black',
+    maxWidth: '100%',
   },
   shadowInput: {
     borderColor: 'transparent',
