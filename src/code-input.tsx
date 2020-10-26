@@ -48,6 +48,12 @@ export function CodeInput(props: CodeInputProps) {
   const inputRef = React.createRef<HTMLInputElement>();
   const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
 
+  const nativeInputSet = <T extends {}>(method: string, value: T) =>
+    Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      method
+    )?.set?.call(inputRef.current, value);
+
   React.useEffect(() => {
     const inputEl = inputRef.current;
     const computedStyles = getComputedStyles(inputEl);
@@ -139,34 +145,25 @@ export function CodeInput(props: CodeInputProps) {
     } else {
       tokens.forEach((token, index) => {
         if (index === activeTokenIndex) {
-          newCursorPosition = completedValue.length;
           if (token.type === "variable") {
             completedValue += hints[hintIndex];
           } else {
             completedValue += token.value + hints[hintIndex];
           }
+          newCursorPosition = completedValue.length;
         } else {
           completedValue += token.value;
         }
       });
     }
 
-    // @todo: enable undo/redo state
-    target.scrollLeft = target.scrollWidth;
-    target.selectionStart = newCursorPosition;
-    target.selectionEnd = newCursorPosition;
-
-    var nativeInputValue = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value"
-    );
-
-    nativeInputValue?.set?.call(inputRef.current, completedValue);
-    inputRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
-    console.log(completedValue);
-
-    setActiveHint(0);
     setHints([]);
+    setActiveHint(0);
+    nativeInputSet("value", completedValue);
+    nativeInputSet("scrollLeft", target.scrollWidth);
+    nativeInputSet("selectionStart", newCursorPosition);
+    nativeInputSet("selectionEnd", newCursorPosition);
+    inputRef.current?.dispatchEvent(new Event("change", { bubbles: true }));
   };
 
   return (
