@@ -2,7 +2,7 @@
 
 A lightweight component that turns `<input type="text" />` into a mini code editor.
 
-Provides basic tokenisation, syntax highlighting, linting and code completion for simple code expressions.
+Provides basic tokenisation, syntax highlighting, linting, and code completion for simple code expressions.
 
 There are zero dependencies and you can style the input in any way that you want.
 
@@ -19,8 +19,8 @@ export default () => (
     operators={['+', '-', '/', '*']}
     variables={['price', 'vat']}
     customInputComponent={MyInput}
-    styles={{ width: '300px' }}
-    onChange={tokens => console.log(tokens)}
+    style={{ width: '300px' }}
+    onChange={(event, { tokens }) => console.log(tokens)}
   />
 );
 ```

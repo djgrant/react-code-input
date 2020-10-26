@@ -6,11 +6,16 @@ import { Token, LintedToken } from './types';
 import { styles, getComputedStyles, getTokenStyles } from './styles';
 
 export interface CodeInputProps {
-  customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
-  style: CSSProperties;
   operators: string[];
   variables: string[];
-  onChange: (params: { tokens: Token[]; value: string }) => any;
+  customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
+  style?: CSSProperties;
+  onChange?: (
+    event: React.SyntheticEvent<HTMLInputElement>,
+    params: {
+      tokens: Token[];
+    }
+  ) => any;
 }
 
 const initialTokens: LintedToken[] = [
@@ -22,7 +27,7 @@ export function CodeInput({
   style,
   operators = [],
   variables = [],
-  onChange,
+  onChange = () => {},
   ...inputProps
 }: CodeInputProps) {
   const Input = customInputComponent || 'input';
@@ -45,12 +50,12 @@ export function CodeInput({
     setComputedStyled(computedStyles);
   }, []);
 
-  const handleChange = ({ target }: { target: HTMLInputElement }) => {
-    const rawTokens = getTokens(target.value, operators);
+  const handleChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
+    const rawTokens = getTokens(event.currentTarget.value, operators);
     const lintedTokens = getLintedTokens(rawTokens, operators, variables);
     const usefulTokens = rawTokens.filter(t => t.type !== 'whitespace');
     setTokens(lintedTokens);
-    onChange({ tokens: usefulTokens, value: target.value });
+    onChange(event, { tokens: usefulTokens });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -149,14 +154,20 @@ export function CodeInput({
     }
 
     // @todo: enable undo/redo state
-    target.value = completedValue;
     target.scrollLeft = target.scrollWidth;
     target.selectionStart = newCursorPosition;
     target.selectionEnd = newCursorPosition;
 
+    var nativeInputValue = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value'
+    );
+
+    nativeInputValue?.set?.call(inputRef.current, completedValue);
+    inputRef.current?.dispatchEvent(new Event('change', { bubbles: true }));
+
     setActiveHint(0);
     setHints([]);
-    handleChange({ target });
   };
 
   return (
