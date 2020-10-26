@@ -5,34 +5,38 @@ import { getTokens, getLintedTokens } from './lexer';
 import { Token, LintedToken } from './types';
 import { styles, getComputedStyles, getTokenStyles } from './styles';
 
-export interface CodeInputProps {
-  operators: string[];
-  variables: string[];
+export interface CodeInputProps extends InputHTMLAttributes<{}> {
+  operators?: string[];
+  variables?: string[];
   customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
   style?: CSSProperties;
   onChange?: (
-    event: React.SyntheticEvent<HTMLInputElement>,
-    params: {
-      tokens: Token[];
-    }
-  ) => any;
+    event: React.SyntheticEvent<HTMLInputElement> & { tokens: Token[] }
+  ) => void;
 }
 
-const initialTokens: LintedToken[] = [
-  { type: 'unknown', value: '', valid: false },
-];
-
-export function CodeInput({
-  customInputComponent,
-  style,
-  operators = [],
-  variables = [],
-  onChange = () => {},
-  ...inputProps
-}: CodeInputProps) {
+export function CodeInput(props: CodeInputProps) {
+  const {
+    operators = [],
+    variables = [],
+    style = {},
+    onChange = () => {},
+    customInputComponent,
+    ...inputProps
+  } = props;
   const Input = customInputComponent || 'input';
-  const [tokens, setTokens] = React.useState(initialTokens);
-  const [activeToken, setActiveToken] = React.useState<LintedToken | null>();
+  const inputIsUncontrolled = typeof inputProps.value === 'undefined';
+  const [controlledValue, setControlledValue] = React.useState(
+    (inputIsUncontrolled && props.defaultValue?.toString()) || ''
+  );
+  const value = inputIsUncontrolled
+    ? controlledValue
+    : inputProps.value?.toString() || '';
+  const rawTokens = getTokens(value, operators);
+  const tokens = getLintedTokens(rawTokens, operators, variables);
+  const [activeTokenIndex, setActiveTokenIndex] = React.useState<
+    number | null
+  >();
   const [hints, setHints] = React.useState<string[]>([]);
   const [activeHint, setActiveHint] = React.useState(0);
   const [hintOffset, setHintOffset] = React.useState(0);
@@ -51,11 +55,10 @@ export function CodeInput({
   }, []);
 
   const handleChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
-    const rawTokens = getTokens(event.currentTarget.value, operators);
-    const lintedTokens = getLintedTokens(rawTokens, operators, variables);
-    const usefulTokens = rawTokens.filter(t => t.type !== 'whitespace');
-    setTokens(lintedTokens);
-    onChange(event, { tokens: usefulTokens });
+    if (inputIsUncontrolled) {
+      setControlledValue(event.currentTarget.value);
+    }
+    onChange(Object.assign(event, { tokens: rawTokens }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -112,11 +115,11 @@ export function CodeInput({
       }
     }
     if (!newActiveToken) return;
-    const tokenIndex = tokens.indexOf(newActiveToken);
-    const tokenRef = tokenRefs[tokenIndex];
-    const tokenRect = tokenRef.current?.getBoundingClientRect();
-    setActiveToken(newActiveToken);
-    setHintOffset(tokenRect?.left || 0);
+    const activeTokenIndex = tokens.indexOf(newActiveToken);
+    const activeTokenRef = tokenRefs[activeTokenIndex];
+    const activeTokenRect = activeTokenRef.current?.getBoundingClientRect();
+    setActiveTokenIndex(activeTokenIndex);
+    setHintOffset(activeTokenRect?.left || 0);
     if (newActiveToken.hints) {
       setHints(newActiveToken.hints);
     } else {
@@ -125,32 +128,27 @@ export function CodeInput({
   };
 
   const completeHint = (target: HTMLInputElement, hintIndex: number) => {
-    const emptyInput = target.value.length === 0;
+    const inputIsEmtpy = target.value.length === 0;
 
     let newCursorPosition = 0;
     let completedValue = '';
-    let foundActiveToken = false;
-    for (const token of tokens) {
-      let newToken;
-      if (token !== activeToken) {
-        newToken = token.value;
-      } else if (token.type !== 'variable') {
-        newToken = token.value + hints[hintIndex];
-      } else {
-        newToken = hints[hintIndex];
-      }
-      if (!foundActiveToken) {
-        newCursorPosition += newToken.length;
-      }
-      if (token === activeToken) {
-        foundActiveToken = true;
-      }
-      completedValue += newToken;
-    }
 
-    if (emptyInput) {
+    if (inputIsEmtpy) {
       completedValue = hints[hintIndex];
       newCursorPosition = completedValue.length;
+    } else {
+      tokens.forEach((token, index) => {
+        if (index === activeTokenIndex) {
+          newCursorPosition = completedValue.length;
+          if (token.type === 'variable') {
+            completedValue += hints[hintIndex];
+          } else {
+            completedValue += token.value + hints[hintIndex];
+          }
+        } else {
+          completedValue += token.value;
+        }
+      });
     }
 
     // @todo: enable undo/redo state
@@ -165,6 +163,7 @@ export function CodeInput({
 
     nativeInputValue?.set?.call(inputRef.current, completedValue);
     inputRef.current?.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log(completedValue);
 
     setActiveHint(0);
     setHints([]);
@@ -178,6 +177,7 @@ export function CodeInput({
         type="text"
         spellCheck="false"
         style={{ ...style, ...styles.input }}
+        value={inputProps.value || value}
         onScroll={e => setScrollPosition(e.currentTarget.scrollLeft)}
         onBlur={() => setHints([])}
         onFocus={handleSelectToken}
