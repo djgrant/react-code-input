@@ -32,6 +32,7 @@ export const styles: Record<string, CSSProperties> = {
     position: "absolute",
     left: 0,
     right: 0,
+    zIndex: 999,
   },
 };
 
