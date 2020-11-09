@@ -20,7 +20,10 @@ export default () => (
     variables={['price', 'vat']}
     customInputComponent={MyInput}
     style={{ width: '300px' }}
-    onChange={(event, { tokens }) => console.log(tokens)}
+    onChange={event => {
+      console.log(event.tokens);
+      console.log(event.currentTarget.value);
+    }}
   />
 );
 ```
