@@ -64,7 +64,11 @@ export function CodeInput(props: CodeInputProps) {
     if (inputIsUncontrolled) {
       setControlledValue(event.currentTarget.value);
     }
-    onChange(Object.assign(event, { tokens: rawTokens }));
+    onChange(
+      Object.assign(event, {
+        tokens: getTokens(event.currentTarget.value, operators),
+      })
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
