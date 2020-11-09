@@ -49,14 +49,12 @@ CustomStyles.args = {
 
 export const ControlledInput = () => {
   const [state, setState] = React.useState('123');
-  // console.log({ state });
   return (
     <CodeInput
       operators={['+']}
       variables={['HEY', 'THERE']}
       value={state}
       onChange={e => {
-        // console.log({ inputValue: e.currentTarget.value });
         setState(e.currentTarget.value.toUpperCase());
       }}
     />
