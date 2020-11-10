@@ -227,17 +227,15 @@ export function CodeInput(props: CodeInputProps) {
           </div>
         </div>
       </div>
-      <div style={styles.hintsContainer}>
-        <Hints
-          style={computedStyles.hints}
-          hints={hints}
-          activeIndex={activeHint}
-          offsetLeft={hintOffset}
-          onSelectHint={(activeHintIndex) => {
-            completeHint(inputRef.current as HTMLInputElement, activeHintIndex);
-          }}
-        />
-      </div>
+      <Hints
+        inputRef={inputRef}
+        hints={hints}
+        activeIndex={activeHint}
+        offsetLeft={hintOffset}
+        onSelectHint={(activeHintIndex) => {
+          completeHint(inputRef.current as HTMLInputElement, activeHintIndex);
+        }}
+      />
     </div>
   );
 }
