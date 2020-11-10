@@ -29,7 +29,8 @@ export const styles: Record<string, CSSProperties> = {
     borderColor: 'transparent',
   },
   hintsContainer: {
-    position: 'relative',
+    position: 'fixed',
+    zIndex: 999,
   },
 };
 

@@ -66,7 +66,6 @@ const styles: Record<string, CSSProperties> = {
     display: 'inline-block',
     position: 'absolute',
     top: -1,
-    zIndex: 999,
     minWidth: 300,
     maxWidth: 400,
     maxHeight: 200,
