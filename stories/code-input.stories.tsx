@@ -14,7 +14,7 @@ const meta: Meta = {
     variables: [
       "accruedInterest",
       "adjustedDiscountPrice",
-      "commision",
+      "commission",
       "costs",
       "cpa",
       "cvr",

@@ -28,11 +28,8 @@ export const styles: Record<string, CSSProperties> = {
   shadowInput: {
     borderColor: "transparent",
   },
-  hints: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    zIndex: 999,
+  hintsContainer: {
+    position: "relative",
   },
 };
 
@@ -77,6 +74,7 @@ export const getComputedStyles = (
       fontFamily: s.fontFamily,
       fontWeight: s.fontWeight,
       fontSize: s.fontSize,
+      left: s.paddingLeft,
     },
   } as ComputedStyles;
 };

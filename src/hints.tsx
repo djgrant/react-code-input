@@ -17,7 +17,7 @@ export function Hints({
 }: HintsProps) {
   if (!hints.length) return null;
   return (
-    <div style={{ ...styles.hints(offset), ...style }}>
+    <div style={{ ...styles.hints, ...style, ...getOffsetStyles(offset) }}>
       {hints.map((hint, i) => (
         <div
           key={i}
@@ -37,21 +37,27 @@ export function Hints({
   );
 }
 
-const styles = {
-  hints: (offset: number): CSSProperties => ({
-    background: "white",
-    color: "black",
+const getOffsetStyles = (offset: number): CSSProperties => {
+  if (!offset) return {};
+  return { left: offset };
+};
+
+const styles: Record<string, CSSProperties> = {
+  hints: {
     display: "inline-block",
-    fontSize: 12,
-    fontFamily: "monospace",
-    minWidth: "150px",
-    position: "fixed",
-    left: `${offset}px`,
-  }),
+    position: "absolute",
+    top: -1,
+    zIndex: 999,
+    minWidth: 300,
+    maxWidth: 400,
+    overflowX: "hidden",
+    background: "#f9f9f9",
+    border: "1px solid #dcdcdc",
+    color: "black",
+    boxShadow: "0 -3px 2px rgba(255,255,255,0.5)",
+  },
   hint: {
-    padding: "10px 8px",
-    border: "1px solid #ddd",
-    borderTop: "none",
+    padding: "4px 6px",
     cursor: "pointer",
   },
   hintActive: {

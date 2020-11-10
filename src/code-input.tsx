@@ -126,15 +126,29 @@ export function CodeInput(props: CodeInputProps) {
     }
     if (!newActiveToken) return;
     const activeTokenIndex = tokens.indexOf(newActiveToken);
-    const activeTokenRef = tokenRefs[activeTokenIndex];
-    const activeTokenRect = activeTokenRef.current?.getBoundingClientRect();
+
     setActiveTokenIndex(activeTokenIndex);
-    setHintOffset(activeTokenRect?.left || 0);
     if (newActiveToken.hints) {
       setHints(newActiveToken.hints);
     } else {
       setHints([]);
     }
+
+    const activeToken = tokens[activeTokenIndex];
+    const activeTokenRef = tokenRefs[activeTokenIndex];
+    const activeTokenEl = activeTokenRef.current;
+    let offset;
+
+    if (!activeTokenEl) return;
+
+    if (["whitespace", "operator"].includes(activeToken.type)) {
+      offset =
+        activeTokenEl.offsetLeft + activeTokenEl.getBoundingClientRect().width;
+    } else {
+      offset = activeTokenEl.offsetLeft;
+    }
+
+    setHintOffset(offset);
   };
 
   const completeHint = (target: HTMLInputElement, hintIndex: number) => {
@@ -213,7 +227,7 @@ export function CodeInput(props: CodeInputProps) {
           </div>
         </div>
       </div>
-      <div style={styles.hints}>
+      <div style={styles.hintsContainer}>
         <Hints
           style={computedStyles.hints}
           hints={hints}
