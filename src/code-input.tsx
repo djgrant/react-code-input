@@ -232,7 +232,7 @@ export function CodeInput(props: CodeInputProps) {
           style={computedStyles.hints}
           hints={hints}
           activeIndex={activeHint}
-          offset={hintOffset}
+          offsetLeft={hintOffset}
           onSelectHint={(activeHintIndex) => {
             completeHint(inputRef.current as HTMLInputElement, activeHintIndex);
           }}
