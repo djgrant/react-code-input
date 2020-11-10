@@ -5,7 +5,6 @@ interface ComputedStyles {
   container: CSSProperties;
   shadowInput: CSSProperties;
   shadowInputContainer: CSSProperties;
-  hints: CSSProperties;
 }
 
 export const styles: Record<string, CSSProperties> = {
@@ -28,10 +27,6 @@ export const styles: Record<string, CSSProperties> = {
   shadowInput: {
     borderColor: 'transparent',
   },
-  hintsContainer: {
-    position: 'fixed',
-    zIndex: 999,
-  },
 };
 
 export const getComputedStyles = (
@@ -42,7 +37,6 @@ export const getComputedStyles = (
       container: {},
       shadowInput: {},
       shadowInputContainer: {},
-      hints: {},
     };
   }
   const s = getComputedStyle(inputEl);
@@ -70,12 +64,6 @@ export const getComputedStyles = (
       paddingRight: s.paddingRight,
       paddingTop: s.paddingTop,
       paddingBottom: s.paddingBottom,
-    },
-    hints: {
-      fontFamily: s.fontFamily,
-      fontWeight: s.fontWeight,
-      fontSize: s.fontSize,
-      left: s.paddingLeft,
     },
   } as ComputedStyles;
 };
