@@ -24,10 +24,16 @@ export function Hints({
     const containerEl = containerRef.current;
     const targetEl = activeHintRef.current;
     if (!containerEl || !targetEl) return;
-    containerEl.scrollTop =
-      targetEl.offsetTop +
-      targetEl.getBoundingClientRect().height -
-      containerEl.getBoundingClientRect().height;
+    const targetOffsetTop = targetEl.offsetTop;
+    const targetOffsetBottom =
+      targetEl.offsetTop + targetEl.getBoundingClientRect().height;
+    const containerHeight = containerEl.getBoundingClientRect().height + 2;
+    const targetAtBottom = targetOffsetBottom - containerHeight;
+    if (targetAtBottom > containerEl.scrollTop) {
+      containerEl.scrollTop = targetAtBottom;
+    } else if (targetOffsetTop < containerEl.scrollTop) {
+      containerEl.scrollTop = targetOffsetTop;
+    }
   }, [activeIndex]);
 
   return (
