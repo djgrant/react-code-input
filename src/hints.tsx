@@ -74,7 +74,7 @@ const styles: Record<string, CSSProperties> = {
     top: -1,
     minWidth: 300,
     maxWidth: 400,
-    maxHeight: 100,
+    maxHeight: 200,
     marginLeft: -1,
     overflowX: 'hidden',
     overflowY: 'scroll',
