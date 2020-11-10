@@ -27,7 +27,7 @@ export function Hints({
     const targetOffsetTop = targetEl.offsetTop;
     const targetOffsetBottom =
       targetEl.offsetTop + targetEl.getBoundingClientRect().height;
-    const containerHeight = containerEl.getBoundingClientRect().height + 2;
+    const containerHeight = containerEl.getBoundingClientRect().height - 2;
     const targetAtBottom = targetOffsetBottom - containerHeight;
     if (targetAtBottom > containerEl.scrollTop) {
       containerEl.scrollTop = targetAtBottom;
@@ -74,7 +74,7 @@ const styles: Record<string, CSSProperties> = {
     top: -1,
     minWidth: 300,
     maxWidth: 400,
-    maxHeight: 200,
+    maxHeight: 100,
     marginLeft: -1,
     overflowX: 'hidden',
     overflowY: 'scroll',
