@@ -3,7 +3,7 @@ import React, { CSSProperties } from 'react';
 interface HintsProps {
   hints: string[];
   activeIndex: number;
-  offset: number;
+  offsetLeft: number;
   onSelectHint: (index: number) => any;
   style: CSSProperties;
 }
@@ -11,36 +11,55 @@ interface HintsProps {
 export function Hints({
   hints,
   activeIndex,
-  offset,
+  offsetLeft,
   onSelectHint,
   style,
 }: HintsProps) {
   if (!hints.length) return null;
+  const containerRef = React.createRef<HTMLDivElement>();
+  const hintRefs = hints.map(() => React.createRef<HTMLDivElement>());
+
+  React.useEffect(() => {
+    const activeHintRef = hintRefs[activeIndex];
+    const containerEl = containerRef.current;
+    const targetEl = activeHintRef.current;
+    if (!containerEl || !targetEl) return;
+    containerEl.scrollTop =
+      targetEl.offsetTop +
+      targetEl.getBoundingClientRect().height -
+      containerEl.getBoundingClientRect().height;
+  }, [activeIndex]);
+
   return (
-    <div style={{ ...styles.hints, ...style, ...getOffsetStyles(offset) }}>
-      {hints.map((hint, i) => (
-        <div
-          key={i}
-          style={{
-            ...styles.hint,
-            ...(activeIndex === i ? styles.hintActive : {}),
-          }}
-          onMouseDown={e => {
-            e.preventDefault();
-            onSelectHint(i);
-          }}
-        >
-          {hint}
-        </div>
-      ))}
+    <div style={{ position: 'relative' }}>
+      <div
+        ref={containerRef}
+        style={{
+          ...styles.hints,
+          ...style,
+          ...computedStyles.hints(offsetLeft),
+        }}
+      >
+        {hints.map((hint, i) => (
+          <div
+            ref={hintRefs[i]}
+            key={i}
+            style={{
+              ...styles.hint,
+              ...(activeIndex === i ? styles.hintActive : {}),
+            }}
+            onMouseDown={e => {
+              e.preventDefault();
+              onSelectHint(i);
+            }}
+          >
+            {hint}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
-const getOffsetStyles = (offset: number): CSSProperties => {
-  if (!offset) return {};
-  return { left: offset };
-};
 
 const styles: Record<string, CSSProperties> = {
   hints: {
@@ -50,7 +69,10 @@ const styles: Record<string, CSSProperties> = {
     zIndex: 999,
     minWidth: 300,
     maxWidth: 400,
+    maxHeight: 200,
+    marginLeft: -1,
     overflowX: 'hidden',
+    overflowY: 'scroll',
     background: '#f9f9f9',
     border: '1px solid #dcdcdc',
     color: 'black',
@@ -63,5 +85,12 @@ const styles: Record<string, CSSProperties> = {
   hintActive: {
     background: '#4299E1',
     color: 'white',
+  },
+};
+
+const computedStyles = {
+  hints: (offsetLeft: number): CSSProperties => {
+    if (!offsetLeft) return {};
+    return { left: offsetLeft };
   },
 };
