@@ -78,6 +78,8 @@ export const getTokenStyles = ({ type, valid }: LintedToken) => {
     style.color = "rgb(0, 112, 230)";
   } else if (type === "number") {
     style.color = "rgb(0, 170, 123)";
+  } else if (type === "string") {
+    style.color = "rgb(194, 126, 16)";
   } else {
     style.color = "rgb(11, 13, 14)";
   }

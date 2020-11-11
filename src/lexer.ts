@@ -4,26 +4,26 @@ const NUMBER = /[0-9]/;
 const VARIABLE = /[a-z,0-9,_]/i;
 const WHITESPACE = /\s/;
 
-export const getTokens = (value: string, operators: string[]) => {
+export const getTokens = (code: string, operators: string[]) => {
   const tokens: Token[] = [];
-  let current = 0;
-  while (current < value.length) {
-    let char = value[current];
+  let index = 0;
+  while (index < code.length) {
+    let char = code[index];
     if (char === "(") {
       tokens.push({ type: "leftParen", value: char });
-      current++;
+      index++;
       continue;
     }
     if (char === ")") {
       tokens.push({ type: "rightParen", value: char });
-      current++;
+      index++;
       continue;
     }
     if (operators.includes(char)) {
       let seq = "";
       while (operators.includes(char)) {
         seq += char;
-        char = value[++current];
+        char = code[++index];
         continue;
       }
       tokens.push({ type: "operator", value: seq });
@@ -33,28 +33,44 @@ export const getTokens = (value: string, operators: string[]) => {
       let seq = "";
       while (NUMBER.test(char)) {
         seq += char;
-        char = value[++current];
+        char = code[++index];
       }
       tokens.push({ type: "number", value: seq });
+      continue;
+    }
+    if (char === '"') {
+      let seq = '"';
+      char = code[++index];
+      while (char && char !== '"') {
+        seq += char;
+        char = code[++index];
+      }
+      if (char && char === '"') {
+        seq += char;
+        index += 1;
+        tokens.push({ type: "string", value: seq });
+      } else {
+        tokens.push({ type: "unknown", value: seq });
+      }
       continue;
     }
     if (VARIABLE.test(char)) {
       let seq = "";
       while (char && VARIABLE.test(char)) {
         seq += char;
-        char = value[++current];
+        char = code[++index];
       }
       tokens.push({ type: "variable", value: seq });
       continue;
     }
     if (WHITESPACE.test(char)) {
       tokens.push({ type: "whitespace", value: char });
-      current++;
+      index++;
       continue;
     }
 
     tokens.push({ type: "unknown", value: char });
-    current++;
+    index++;
   }
 
   return tokens;
