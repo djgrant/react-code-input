@@ -5,6 +5,7 @@ export interface Token {
     | 'variable'
     | 'operator'
     | 'number'
+    | 'string'
     | 'whitespace'
     | 'unknown';
   value: string;
