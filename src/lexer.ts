@@ -38,14 +38,15 @@ export const getTokens = (code: string, operators: string[]) => {
       tokens.push({ type: "number", value: seq });
       continue;
     }
-    if (char === '"') {
-      let seq = '"';
+    if (char === '"' || char === "'") {
+      const quoteMark = char;
+      let seq = quoteMark;
       char = code[++index];
-      while (char && char !== '"') {
+      while (char && char !== quoteMark) {
         seq += char;
         char = code[++index];
       }
-      if (char && char === '"') {
+      if (char && char === quoteMark) {
         seq += char;
         index += 1;
         tokens.push({ type: "string", value: seq });
