@@ -40,7 +40,7 @@ export function Hints({
     }
   }, [activeIndex]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     setStyles(getComputedStyles(inputRef.current, offsetLeft));
   }, []);
 
@@ -73,12 +73,14 @@ export function Hints({
 const getComputedStyles = (inputEl: HTMLElement | null, offsetLeft: number) => {
   if (!inputEl) return { hints: {}, hint: {}, hintActive: {} };
   const s = getComputedStyle(inputEl);
-  const hintPaddingY = 4;
-  const hintHeight = Number(s.lineHeight.replace('px', '')) + hintPaddingY;
+  const inputRect = inputEl.getBoundingClientRect();
+  const inputPaddingBottom = Number(s.paddingBottom.replace('px', ''));
+  const inputFontSize = Number(s.fontSize.replace('px', ''));
+  const hintPaddingY = 6;
+  const hintHeight = inputFontSize + hintPaddingY * 2;
   const hintTop =
-    Number(s.lineHeight.replace('px', '')) +
-    Number(s.paddingTop.replace('px', '')) +
-    4;
+    inputRect.height - inputPaddingBottom + inputPaddingBottom / 2.5;
+
   return {
     positioningContainer: {
       position: 'absolute',
@@ -101,14 +103,14 @@ const getComputedStyles = (inputEl: HTMLElement | null, offsetLeft: number) => {
       background: '#f9f9f9',
       border: '1px solid #dcdcdc',
       color: '#111',
-      fontFamily: s.fontFamily,
-      fontWeight: s.fontWeight,
-      fontSize: s.fontSize,
     } as CSSProperties,
     hint: {
       boxSizing: 'content-box',
-      height: s.lineHeight,
+      height: s.fontSize,
       padding: `${hintPaddingY}px 6px`,
+      fontFamily: s.fontFamily,
+      fontSize: s.fontSize,
+      lineHeight: 1,
       cursor: 'pointer',
     } as CSSProperties,
     hintActive: {
