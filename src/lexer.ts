@@ -1,7 +1,7 @@
 import { LintedToken, Token } from './types';
 
-const NUMBER = /[0-9]/;
-const VARIABLE = /[a-z,0-9,_]/i;
+const NUMBER = /[0-9.]/;
+const VARIABLE = /[a-z0-9_]/i;
 const WHITESPACE = /\s/;
 
 export const getTokens = (code: string, operators: string[]) => {
@@ -99,6 +99,12 @@ export const getLintedTokens = (
       return {
         ...token,
         valid: operators.includes(token.value),
+      };
+    }
+    if (token.type === 'number') {
+      return {
+        ...token,
+        valid: token.value.split('').filter(char => char === '.').length < 2,
       };
     }
     if (token.type === 'unknown') {
