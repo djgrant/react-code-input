@@ -1,14 +1,20 @@
-import React, { InputHTMLAttributes } from 'react';
+import React, { createRef, useState, useEffect } from 'react';
 import { CSSProperties } from 'react';
 import { Hints } from './hints';
+import { makeSetInputElementProperty } from './utils';
 import { getTokens, getLintedTokens } from './lexer';
 import { Token, LintedToken } from './types';
 import { styles, getComputedStyles, getTokenStyles } from './styles';
 
-export interface CodeInputProps extends InputHTMLAttributes<{}> {
+const QUOTE_MARK = /['"]/;
+const WHITESPACE = / +/;
+
+export interface CodeInputProps extends React.InputHTMLAttributes<{}> {
   operators?: string[];
   variables?: string[];
-  customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
+  customInputComponent?: React.JSXElementConstructor<
+    React.InputHTMLAttributes<{}>
+  >;
   style?: CSSProperties;
   onChange?: (
     event: React.SyntheticEvent<HTMLInputElement> & { tokens: Token[] }
@@ -26,67 +32,137 @@ export function CodeInput(props: CodeInputProps) {
   } = props;
   const Input = customInputComponent || 'input';
   const inputIsUncontrolled = typeof inputProps.value === 'undefined';
-  const [controlledValue, setControlledValue] = React.useState(
-    (inputIsUncontrolled && props.defaultValue?.toString()) || ''
-  );
-  const value = inputIsUncontrolled
-    ? controlledValue
-    : inputProps.value?.toString() || '';
+  const defaultValue = props.defaultValue?.toString() || '';
+  const initialValue = inputProps.value?.toString() || '';
+
+  const [activeTokenIndex, setActiveTokenIndex] = useState<number | null>(null);
+  const [hints, setHints] = useState<string[]>([]);
+  const [activeHint, setActiveHint] = useState(0);
+  const [hintOffset, setHintOffset] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [computedStyles, setComputedStyled] = useState(getComputedStyles(null));
+  const [controlledValue, setControlledValue] = useState(defaultValue);
+
+  const value = inputIsUncontrolled ? controlledValue : initialValue;
   const rawTokens = getTokens(value, operators);
   const tokens = getLintedTokens(rawTokens, operators, variables);
-  const [activeTokenIndex, setActiveTokenIndex] = React.useState<
-    number | null
-  >();
-  const [hints, setHints] = React.useState<string[]>([]);
-  const [activeHint, setActiveHint] = React.useState(0);
-  const [hintOffset, setHintOffset] = React.useState(0);
-  const [scrollPosition, setScrollPosition] = React.useState(0);
-  const [computedStyles, setComputedStyled] = React.useState(
-    getComputedStyles(null)
-  );
 
-  const inputRef = React.createRef<HTMLInputElement>();
-  const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
+  const inputRef = createRef<HTMLInputElement>();
+  const tokenRefs = tokens.map(() => createRef<HTMLDivElement>());
 
-  const nativeInputSet = <T extends {}>(method: string, value: T) =>
-    Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      method
-    )?.set?.call(inputRef.current, value);
+  const setInputProperty = makeSetInputElementProperty(inputRef);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const inputEl = inputRef.current;
     const computedStyles = getComputedStyles(inputEl);
     setComputedStyled(computedStyles);
   }, []);
 
   const handleChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
+    const nextValue = event.currentTarget.value;
     if (inputIsUncontrolled) {
-      setControlledValue(event.currentTarget.value);
+      setControlledValue(nextValue);
     }
-    onChange(
-      Object.assign(event, {
-        tokens: getTokens(event.currentTarget.value, operators),
-      })
-    );
+    onChange(Object.assign(event, { tokens: getTokens(nextValue, operators) }));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleEditingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const selectionStart = e.currentTarget.selectionStart || 0;
+    const currentToken =
+      activeTokenIndex !== null ? tokens[activeTokenIndex] : null;
+    const prevToken =
+      activeTokenIndex !== null ? tokens[activeTokenIndex - 1] || null : null;
+
+    e.persist();
+
+    /* 
+      Insert quote pair
+      @transform: *| *  ->  *"| *  =>  *"|" *
+      @skip:      "|*  
+      @skip:      *|*  
+      @skip:      "*|
+    */
+    if (
+      QUOTE_MARK.test(e.key) &&
+      !QUOTE_MARK.test(value[selectionStart - 1]) &&
+      !(currentToken && currentToken.type === 'unterminatedString') &&
+      !(prevToken && prevToken.type === 'unterminatedString') &&
+      (typeof value[selectionStart] === 'undefined' ||
+        WHITESPACE.test(value[selectionStart]))
+    ) {
+      const newValue =
+        (value.slice(0, selectionStart) || '') +
+        e.key +
+        (value.slice(selectionStart) || '');
+
+      setInputProperty('value', newValue);
+      setInputProperty('selectionStart', selectionStart);
+      setInputProperty('selectionEnd', selectionStart);
+      if (!inputIsUncontrolled) {
+        handleChange(e);
+      }
+    }
+
+    /*
+      Overwrite closing quote
+      @transform: *|"  ->  *"|
+      @transform: *|'  ->  *'| 
+    */
+    if (
+      QUOTE_MARK.test(e.key) &&
+      QUOTE_MARK.test(value[selectionStart]) &&
+      e.key === value[selectionStart] &&
+      currentToken &&
+      currentToken.type === 'string' &&
+      currentToken.value.startsWith(e.key)
+    ) {
+      e.preventDefault();
+      setInputProperty('selectionStart', selectionStart + 1);
+      setInputProperty('selectionEnd', selectionStart + 1);
+    }
+
+    /*
+      Delete quote pair
+      @transform: "|"  ->  | 
+    */
+    if (
+      e.key === 'Backspace' &&
+      QUOTE_MARK.test(value[selectionStart - 1]) &&
+      QUOTE_MARK.test(value[selectionStart])
+    ) {
+      const newValue =
+        (value.slice(0, selectionStart - 1) || '') +
+        (value.slice(selectionStart + 1) || '');
+
+      e.preventDefault();
+      setInputProperty('value', newValue);
+      setInputProperty('selectionStart', selectionStart - 1);
+      setInputProperty('selectionEnd', selectionStart - 1);
+      handleChange(e);
+    }
+  };
+
+  const handleNavigatingKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     const ctrl = e.ctrlKey;
     const enter = e.key === 'Enter';
     const space = e.key === ' ';
     const esc = e.key === 'Escape';
     const up = e.key === 'ArrowUp';
     const down = e.key === 'ArrowDown';
-    const scrollingHints = up || down;
 
+    // <Hints /> closed
     if (ctrl && space && !hints.length) {
       handleSelectToken(e);
       setHints(variables);
     }
+
     if (!hints.length) {
       return;
     }
+
+    // <Hints /> open
     if (esc) {
       setHints([]);
     }
@@ -107,7 +183,7 @@ export function CodeInput(props: CodeInputProps) {
       const max = hints.length - 1;
       setActiveHint(nextIndex > max ? 0 : nextIndex);
     }
-    if (!scrollingHints) {
+    if (!(up || down)) {
       handleSelectToken(e);
     }
   };
@@ -124,10 +200,12 @@ export function CodeInput(props: CodeInputProps) {
         break;
       }
     }
-    if (!newActiveToken) return;
-    const activeTokenIndex = tokens.indexOf(newActiveToken);
 
+    if (!newActiveToken) return;
+
+    const activeTokenIndex = tokens.indexOf(newActiveToken);
     setActiveTokenIndex(activeTokenIndex);
+
     if (newActiveToken.hints) {
       setHints(newActiveToken.hints);
     } else {
@@ -177,10 +255,10 @@ export function CodeInput(props: CodeInputProps) {
 
     setHints([]);
     setActiveHint(0);
-    nativeInputSet('value', completedValue);
-    nativeInputSet('scrollLeft', target.scrollWidth);
-    nativeInputSet('selectionStart', newCursorPosition);
-    nativeInputSet('selectionEnd', newCursorPosition);
+    setInputProperty('value', completedValue);
+    setInputProperty('scrollLeft', target.scrollWidth);
+    setInputProperty('selectionStart', newCursorPosition);
+    setInputProperty('selectionEnd', newCursorPosition);
     inputRef.current?.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
@@ -198,7 +276,10 @@ export function CodeInput(props: CodeInputProps) {
         onFocus={handleSelectToken}
         onClick={handleSelectToken}
         onSelect={handleSelectToken}
-        onKeyDown={handleKeyDown}
+        onKeyDown={e => {
+          handleEditingKeyDown(e);
+          handleNavigatingKeyDown(e);
+        }}
         onChange={handleChange}
       />
       <div

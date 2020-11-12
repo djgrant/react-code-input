@@ -7,7 +7,8 @@ export interface Token {
     | 'number'
     | 'string'
     | 'whitespace'
-    | 'unknown';
+    | 'unknown'
+    | 'unterminatedString';
   value: string;
 }
 

@@ -55,7 +55,7 @@ export const ControlledInput = () => {
       variables={['HEY', 'THERE']}
       value={state}
       onChange={e => {
-        setState(e.currentTarget.value.toUpperCase());
+        setState(e.currentTarget.value);
       }}
     />
   );
