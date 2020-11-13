@@ -3,6 +3,7 @@ import { LintedToken, Token } from "./types";
 const NUMBER = /[0-9.]/;
 const VARIABLE = /[a-z0-9_]/i;
 const WHITESPACE = /\s/;
+const QUOTE_MARK = /['"]/;
 
 export const getTokens = (code: string, operators: string[]) => {
   const tokens: Token[] = [];
@@ -38,7 +39,7 @@ export const getTokens = (code: string, operators: string[]) => {
       tokens.push({ type: "number", value: seq });
       continue;
     }
-    if (char === '"' || char === "'") {
+    if (QUOTE_MARK.test(char)) {
       const quoteMark = char;
       let seq = quoteMark;
       char = code[++index];
@@ -49,7 +50,11 @@ export const getTokens = (code: string, operators: string[]) => {
       if (char && char === quoteMark) {
         seq += char;
         index += 1;
-        tokens.push({ type: "string", value: seq });
+        tokens.push({
+          type: "string",
+          renderedValue: seq,
+          value: seq.slice(1, -1),
+        });
       } else {
         tokens.push({ type: "unknown", value: seq });
       }
@@ -65,7 +70,11 @@ export const getTokens = (code: string, operators: string[]) => {
       continue;
     }
     if (WHITESPACE.test(char)) {
-      tokens.push({ type: "whitespace", value: char });
+      tokens.push({
+        type: "whitespace",
+        renderedValue: "\u00A0",
+        value: char,
+      });
       index++;
       continue;
     }

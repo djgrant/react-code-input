@@ -9,6 +9,7 @@ export interface Token {
     | "whitespace"
     | "unknown";
   value: string;
+  renderedValue?: string;
 }
 
 export type LintedToken = Token & { hints?: string[]; valid: boolean };

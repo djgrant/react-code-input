@@ -221,7 +221,7 @@ export function CodeInput(props: CodeInputProps) {
                 ref={tokenRefs[i]}
                 style={getTokenStyles(token)}
               >
-                {token.value === " " ? "\u00A0" : token.value}
+                {token.renderedValue || token.value}
               </div>
             ))}
           </div>
