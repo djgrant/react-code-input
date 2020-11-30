@@ -166,11 +166,12 @@ export function CodeInput(props: CodeInputProps) {
           if (token.type === "variable") {
             completedValue += hints[hintIndex];
           } else {
-            completedValue += token.value + hints[hintIndex];
+            completedValue +=
+              (token.renderedValue || token.value) + hints[hintIndex];
           }
           newCursorPosition = completedValue.length;
         } else {
-          completedValue += token.value;
+          completedValue += token.renderedValue || token.value;
         }
       });
     }
@@ -193,7 +194,7 @@ export function CodeInput(props: CodeInputProps) {
         spellCheck="false"
         style={{ ...style, ...styles.input }}
         value={inputProps.value || value}
-        onScroll={(e) => setScrollPosition(e.currentTarget.scrollLeft)}
+        onScroll={e => setScrollPosition(e.currentTarget.scrollLeft)}
         onBlur={() => setHints([])}
         onFocus={handleSelectToken}
         onClick={handleSelectToken}
@@ -232,7 +233,7 @@ export function CodeInput(props: CodeInputProps) {
         hints={hints}
         activeIndex={activeHint}
         offsetLeft={hintOffset}
-        onSelectHint={(activeHintIndex) => {
+        onSelectHint={activeHintIndex => {
           completeHint(inputRef.current as HTMLInputElement, activeHintIndex);
         }}
       />
