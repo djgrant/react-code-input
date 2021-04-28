@@ -1,3 +1,2 @@
-export * from "./code-input";
-export * from "./types";
-export * from "./lexer";
+export * from "./components/code-input";
+export * from "./compiler";

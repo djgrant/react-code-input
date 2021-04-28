@@ -1,19 +1,19 @@
 import React from "react";
 import { Meta, Story } from "@storybook/react";
-import { CodeInput, CodeInputProps } from "../src/code-input";
+import { CodeInput, CodeInputProps } from "../src";
 
 const meta: Meta = {
   title: "CodeInput",
   component: CodeInput,
   argTypes: {
-    operators: { control: { type: "array" } },
-    variables: { control: { type: "array" } },
+    symbols: { control: { type: "array" } },
   },
   args: {
-    operators: ["+", "-", "/", "*"],
-    variables: [
+    symbols: [
       "accruedInterest",
       "adjustedDiscountPrice",
+      "all",
+      "any",
       "commission",
       "costs",
       "cpa",
@@ -23,7 +23,7 @@ const meta: Meta = {
       "salePrice",
       "vat",
     ],
-    placeholder: "salePrice - vat",
+    placeholder: "any(salePrice - vat, cpa)",
   },
   parameters: {
     controls: { expanded: true },
@@ -32,7 +32,7 @@ const meta: Meta = {
 
 export default meta;
 
-const Template: Story<CodeInputProps> = (args) => <CodeInput {...args} />;
+const Template: Story<CodeInputProps> = args => <CodeInput {...args} />;
 
 export const Default = Template.bind({});
 Default.args = {};
@@ -51,10 +51,9 @@ export const ControlledInput = () => {
   const [state, setState] = React.useState("123");
   return (
     <CodeInput
-      operators={["+"]}
-      variables={["HEY", "THERE"]}
+      symbols={["HEY", "THERE"]}
       value={state}
-      onChange={(e) => {
+      onChange={e => {
         setState(e.currentTarget.value.toUpperCase());
       }}
     />

@@ -1,13 +1,12 @@
 import React, { InputHTMLAttributes } from "react";
 import { CSSProperties } from "react";
 import { Hints } from "./hints";
-import { getTokens, getLintedTokens } from "./lexer";
-import { Token, LintedToken } from "./types";
+import { getTokens, getEditorTokens } from "../compiler";
+import { Token, EditorToken } from "../compiler/types";
 import { styles, getComputedStyles, getTokenStyles } from "./styles";
 
 export interface CodeInputProps extends InputHTMLAttributes<{}> {
-  operators?: string[];
-  variables?: string[];
+  symbols?: string[];
   customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
   style?: CSSProperties;
   onChange?: (
@@ -17,8 +16,7 @@ export interface CodeInputProps extends InputHTMLAttributes<{}> {
 
 export function CodeInput(props: CodeInputProps) {
   const {
-    operators = [],
-    variables = [],
+    symbols = [],
     style = {},
     onChange = () => {},
     customInputComponent,
@@ -32,8 +30,8 @@ export function CodeInput(props: CodeInputProps) {
   const value = inputIsUncontrolled
     ? controlledValue
     : inputProps.value?.toString() || "";
-  const rawTokens = getTokens(value, operators);
-  const tokens = getLintedTokens(rawTokens, operators, variables);
+  const sourceTokens = getTokens(value);
+  const tokens = getEditorTokens(sourceTokens, symbols);
   const [activeTokenIndex, setActiveTokenIndex] = React.useState<
     number | null
   >();
@@ -64,11 +62,7 @@ export function CodeInput(props: CodeInputProps) {
     if (inputIsUncontrolled) {
       setControlledValue(event.currentTarget.value);
     }
-    onChange(
-      Object.assign(event, {
-        tokens: getTokens(event.currentTarget.value, operators),
-      })
-    );
+    onChange(Object.assign(event, { tokens: sourceTokens }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -82,7 +76,7 @@ export function CodeInput(props: CodeInputProps) {
 
     if (ctrl && space && !hints.length) {
       handleSelectToken(e);
-      setHints(variables);
+      setHints(symbols);
     }
     if (!hints.length) {
       return;
@@ -115,7 +109,7 @@ export function CodeInput(props: CodeInputProps) {
   const handleSelectToken = (e: React.SyntheticEvent<HTMLInputElement>) => {
     const cursorPosition = e.currentTarget.selectionStart || 0;
 
-    let newActiveToken: LintedToken | null = null;
+    let newActiveToken: EditorToken | null = null;
     let len = 0;
     for (const token of tokens) {
       len += token.value.length;
@@ -163,15 +157,14 @@ export function CodeInput(props: CodeInputProps) {
     } else {
       tokens.forEach((token, index) => {
         if (index === activeTokenIndex) {
-          if (token.type === "variable") {
+          if (token.type === "identifier") {
             completedValue += hints[hintIndex];
           } else {
-            completedValue +=
-              (token.renderedValue || token.value) + hints[hintIndex];
+            completedValue += (token.raw || token.value) + hints[hintIndex];
           }
           newCursorPosition = completedValue.length;
         } else {
-          completedValue += token.renderedValue || token.value;
+          completedValue += token.raw || token.value;
         }
       });
     }
@@ -222,7 +215,7 @@ export function CodeInput(props: CodeInputProps) {
                 ref={tokenRefs[i]}
                 style={getTokenStyles(token)}
               >
-                {token.renderedValue || token.value}
+                {token.raw || token.value}
               </div>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { LintedToken } from "./types";
+import { EditorToken } from "../compiler";
 
 interface ComputedStyles {
   container: CSSProperties;
@@ -68,18 +68,20 @@ export const getComputedStyles = (
   } as ComputedStyles;
 };
 
-export const getTokenStyles = ({ type, valid }: LintedToken) => {
+export const getTokenStyles = ({ type, variant, valid }: EditorToken) => {
   const style: CSSProperties = {
     position: "relative",
     display: "inline",
     borderBottom: valid ? undefined : "2px dotted red",
   };
-  if (type === "variable" && valid) {
+  if (type === "identifier" && variant === "CallExpression") {
     style.color = "rgb(0, 112, 230)";
+  } else if (type === "identifier" && valid) {
+    style.color = "rgb(189, 131, 16)";
   } else if (type === "number") {
     style.color = "rgb(0, 170, 123)";
   } else if (type === "string") {
-    style.color = "rgb(194, 126, 16)";
+    style.color = "rgb(171, 71, 41)";
   } else {
     style.color = "rgb(20, 23, 24)";
   }
