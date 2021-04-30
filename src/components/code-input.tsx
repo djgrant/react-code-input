@@ -1,17 +1,22 @@
-import React, { InputHTMLAttributes } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CSSProperties } from "react";
 import { Hints } from "./hints";
 import { getTokens, getEditorTokens, buildAST } from "../compiler";
-import { Token, EditorToken } from "../compiler/types";
+import { AST, Token, EditorToken } from "../compiler/types";
 import { styles, getComputedStyles, getTokenStyles } from "./styles";
 
-export interface CodeInputProps extends InputHTMLAttributes<{}> {
+export interface CodeInputProps extends React.InputHTMLAttributes<{}> {
   symbols?: string[];
-  customInputComponent?: React.JSXElementConstructor<InputHTMLAttributes<{}>>;
+  customInputComponent?: React.JSXElementConstructor<
+    React.InputHTMLAttributes<{}>
+  >;
   style?: CSSProperties;
-  onChange?: (
-    event: React.SyntheticEvent<HTMLInputElement> & { tokens: Token[] }
-  ) => void;
+  onChange?: (event: React.SyntheticEvent<HTMLInputElement>) => void;
+  onParse?: (params: {
+    tokens: Token[];
+    ast: AST | null | void;
+    errors: Error[];
+  }) => void;
 }
 
 export function CodeInput(props: CodeInputProps) {
@@ -19,50 +24,58 @@ export function CodeInput(props: CodeInputProps) {
     symbols = [],
     style = {},
     onChange = () => {},
+    onParse,
     customInputComponent,
     ...inputProps
   } = props;
   const Input = customInputComponent || "input";
   const inputIsUncontrolled = typeof inputProps.value === "undefined";
-  const [controlledValue, setControlledValue] = React.useState(
+
+  const [controlledValue, setControlledValue] = useState(
     (inputIsUncontrolled && props.defaultValue?.toString()) || ""
   );
+
   const value = inputIsUncontrolled
     ? controlledValue
     : inputProps.value?.toString() || "";
-  const sourceTokens = getTokens(value);
-  const tokens = getEditorTokens(sourceTokens, symbols);
-  const [activeTokenIndex, setActiveTokenIndex] = React.useState<
-    number | null
-  >();
-  const [hints, setHints] = React.useState<string[]>([]);
-  const [activeHint, setActiveHint] = React.useState(0);
-  const [hintOffset, setHintOffset] = React.useState(0);
-  const [scrollPosition, setScrollPosition] = React.useState(0);
-  const [computedStyles, setComputedStyled] = React.useState(
-    getComputedStyles(null)
-  );
+
+  const sourceTokens = useMemo(() => getTokens(value), [value]);
+  const tokens = useMemo(() => getEditorTokens(sourceTokens, symbols), [value]);
+
+  const [activeTokenIndex, setActiveTokenIndex] = useState<number | null>();
+  const [hints, setHints] = useState<string[]>([]);
+  const [activeHint, setActiveHint] = useState(0);
+  const [hintOffset, setHintOffset] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [computedStyles, setComputedStyled] = useState(getComputedStyles(null));
 
   const inputRef = React.createRef<HTMLInputElement>();
   const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
 
-  React.useEffect(() => {
+  useEffect(() => {
+    let ast;
     const errors = tokens
       .filter(t => !t.valid)
       .map(t => new Error(`Cannot find identifier ${t.value}`));
 
     try {
-      buildAST(sourceTokens);
+      ast = buildAST(sourceTokens);
     } catch (err) {
       errors.push(err);
     }
 
-    if (errors.length) {
-      inputRef.current?.setCustomValidity(errors[0].message);
-    } else {
-      inputRef.current?.setCustomValidity("");
+    inputRef.current?.setCustomValidity(errors.length ? errors[0].message : "");
+
+    if (typeof onParse === "function") {
+      onParse({ tokens: sourceTokens, ast, errors });
     }
-  }, [tokens, inputRef]);
+  }, [tokens, sourceTokens]);
+
+  useEffect(() => {
+    const inputEl = inputRef.current;
+    const computedStyles = getComputedStyles(inputEl);
+    setComputedStyled(computedStyles);
+  }, []);
 
   const nativeInputSet = <T extends {}>(method: string, value: T) =>
     Object.getOwnPropertyDescriptor(
@@ -70,17 +83,11 @@ export function CodeInput(props: CodeInputProps) {
       method
     )?.set?.call(inputRef.current, value);
 
-  React.useEffect(() => {
-    const inputEl = inputRef.current;
-    const computedStyles = getComputedStyles(inputEl);
-    setComputedStyled(computedStyles);
-  }, []);
-
   const handleChange = (event: React.SyntheticEvent<HTMLInputElement>) => {
     if (inputIsUncontrolled) {
       setControlledValue(event.currentTarget.value);
     }
-    onChange(Object.assign(event, { tokens: sourceTokens }));
+    onChange(event);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
