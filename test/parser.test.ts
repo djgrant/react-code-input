@@ -1,7 +1,63 @@
 import { getTokens } from "../src/compiler/lexer";
-import { buildAST } from "../src/compiler/parser";
+import {
+  buildAST,
+  EndOfLineError,
+  UnexpectedTokenError,
+  UnknownTokenError,
+} from "../src/compiler/parser";
 
 describe("parser", () => {
+  test("empty string", () => {
+    const tokens = getTokens("");
+    const ast = buildAST(tokens);
+    expect(ast).toEqual(null);
+  });
+
+  test("1 +", () => {
+    const tokens = getTokens("1 +");
+    expect(() => buildAST(tokens)).toThrow(EndOfLineError);
+  });
+
+  test(`any(1, 2`, () => {
+    const tokens = getTokens(`any(1, 2`);
+    expect(() => buildAST(tokens)).toThrow(EndOfLineError);
+  });
+
+  test(`[1, 2,`, () => {
+    const tokens = getTokens(`[1, 2,`);
+    expect(() => buildAST(tokens)).toThrow(EndOfLineError);
+  });
+
+  test(`1 fn(1)`, () => {
+    const tokens = getTokens(`1 fn(1)`);
+    expect(() => buildAST(tokens)).toThrow(UnexpectedTokenError);
+  });
+
+  test(`1 1`, () => {
+    const tokens = getTokens(`1 1`);
+    expect(() => buildAST(tokens)).toThrow(UnexpectedTokenError);
+  });
+
+  test(`1 + $1`, () => {
+    const tokens = getTokens(`1 + $1`);
+    expect(() => buildAST(tokens)).toThrow(UnknownTokenError);
+  });
+
+  test(`1 bar`, () => {
+    const tokens = getTokens(`1 bar`);
+    expect(() => buildAST(tokens)).toThrow(UnexpectedTokenError);
+  });
+
+  test(`foo(1 bar)`, () => {
+    const tokens = getTokens(`foo(1 bar)`);
+    expect(() => buildAST(tokens)).toThrow(UnexpectedTokenError);
+  });
+
+  test(`foo(1bar)`, () => {
+    const tokens = getTokens(`foo(1bar)`);
+    expect(() => buildAST(tokens)).toThrow(UnexpectedTokenError);
+  });
+
   test("12", () => {
     const tokens = getTokens("12");
     const ast = buildAST(tokens);
@@ -210,6 +266,21 @@ describe("parser", () => {
     });
   });
 
+  test(`sum(1,2,3,)`, () => {
+    const tokens = getTokens(`sum(1,2,3,)`);
+    const ast = buildAST(tokens);
+
+    expect(ast).toMatchObject({
+      type: "CallExpression",
+      callee: { type: "Identifier", name: "sum" },
+      arguments: [
+        { type: "Literal", value: 1 },
+        { type: "Literal", value: 2 },
+        { type: "Literal", value: 3 },
+      ],
+    });
+  });
+
   test(`sum(123, (1 + 2), true)`, () => {
     const tokens = getTokens(`sum(123, (1 + 2), true)`);
     const ast = buildAST(tokens);
@@ -296,8 +367,72 @@ describe("parser", () => {
     });
   });
 
-  test.skip(`any(1, 2`, () => {
-    const tokens = getTokens(`any(1, 2`);
-    expect(() => buildAST(tokens)).toThrow();
+  test("any(a + b) - c", () => {
+    const tokens = getTokens("any(a + b) - c");
+    expect(() => buildAST(tokens)).not.toThrow();
+  });
+
+  test("any(a, all(b, c))", () => {
+    const tokens = getTokens("any(a, all(b, c))");
+    const ast = buildAST(tokens);
+    expect(ast).toMatchObject({
+      type: "CallExpression",
+      callee: {
+        type: "Identifier",
+        name: "any",
+        start: 0,
+        end: 3,
+      },
+      arguments: [
+        {
+          type: "Identifier",
+          name: "a",
+          start: 4,
+          end: 5,
+        },
+        {
+          type: "CallExpression",
+          callee: {
+            type: "Identifier",
+            name: "all",
+            start: 7,
+            end: 10,
+          },
+          arguments: [
+            {
+              type: "Identifier",
+              name: "b",
+              start: 11,
+              end: 12,
+            },
+            {
+              type: "Identifier",
+              name: "c",
+              start: 14,
+              end: 15,
+            },
+          ],
+          start: 7,
+          end: 16,
+        },
+      ],
+      start: 0,
+      end: 17,
+    });
+  });
+
+  test("any(a, all(b, c)) + d", () => {
+    const tokens = getTokens("any(a, all(b, c)) + d");
+    expect(() => buildAST(tokens)).not.toThrow();
+  });
+
+  test(`(fn(1) + 1)`, () => {
+    const tokens = getTokens(`(fn(1) + 1)`);
+    expect(() => buildAST(tokens)).not.toThrow();
+  });
+
+  test(`[1,2] + 1`, () => {
+    const tokens = getTokens(`[1,2] + 1`);
+    expect(() => buildAST(tokens)).not.toThrow();
   });
 });

@@ -1,25 +1,37 @@
-import { ArrayExpression, AST, Token } from "./types";
+import { AST, Token } from "./types";
 
 const ADDSUB = /^\+$|^\-$/;
 const MULDIV = /^\*$|^\/$/;
 
-export const buildAST = (allTokens: Token[]): AST => {
+type Cursor = Token & { next: Token | null };
+
+export const buildAST = (allTokens: Token[]): AST | null => {
   const tokens = allTokens.filter(token => token.type !== "whitespace");
   let i = -1;
-  let token: Token;
-  let next: Token;
-  incrementToken();
+  let token = getNextToken();
 
-  return parseExpression();
+  if (tokens.length === 0) return null;
 
-  function incrementToken() {
+  const ast = parseExpression();
+
+  if (token) {
+    throw new UnexpectedTokenError(allTokens, token);
+  }
+
+  return ast;
+
+  function getNextToken(): Cursor | null {
     i++;
     const last = tokens.length - 1;
-    if (i <= last) token = tokens[i];
-    if (i < last) next = tokens[i + 1];
+    const next = i < last ? tokens[i + 1] : null;
+    return i <= last ? { ...tokens[i], next } : null;
   }
 
   function parseTerminal(): AST {
+    if (!token) {
+      throw new EndOfLineError(allTokens);
+    }
+
     if (token.type === "number") {
       const node: AST = {
         type: "Literal",
@@ -27,7 +39,7 @@ export const buildAST = (allTokens: Token[]): AST => {
         start: token.start,
         end: token.end,
       };
-      incrementToken();
+      token = getNextToken();
       return node;
     }
 
@@ -38,7 +50,7 @@ export const buildAST = (allTokens: Token[]): AST => {
         start: token.start,
         end: token.end,
       };
-      incrementToken();
+      token = getNextToken();
       return node;
     }
 
@@ -49,7 +61,7 @@ export const buildAST = (allTokens: Token[]): AST => {
         start: token.start,
         end: token.end,
       };
-      incrementToken();
+      token = getNextToken();
       return node;
     }
 
@@ -60,45 +72,55 @@ export const buildAST = (allTokens: Token[]): AST => {
         start: token.start,
         end: token.end,
       };
-      incrementToken();
+      token = getNextToken();
       return node;
     }
 
-    throw new TokenError(token, allTokens);
+    throw new UnknownTokenError(allTokens, token);
   }
 
   function parseExpression(): AST {
-    if (token.type === "leftParen") {
-      incrementToken();
-      return parseExpression();
+    let node: AST | void;
+
+    // Sub Expression
+    if (token?.type === "leftParen") {
+      token = getNextToken();
+      node = parseExpression();
+      if (!token || token?.type !== "rightParen") {
+        throw new EndOfLineError(allTokens, ")");
+      } else {
+        token = getNextToken();
+      }
     }
 
-    if (token.type === "leftSquare") {
-      const node: ArrayExpression = {
+    // Array Expression
+    if (token?.type === "leftSquare") {
+      node = {
         type: "ArrayExpression",
         elements: [],
         start: token.start,
         end: -1,
       };
 
-      incrementToken();
-      while (token.type !== "rightSquare") {
+      token = getNextToken();
+      while (token && token?.type !== "rightSquare") {
         if (token.type === "comma") {
-          incrementToken();
-          continue;
+          token = getNextToken();
+        } else {
+          node.elements.push(parseExpression());
         }
-        node.elements.push(parseExpression());
-        token = tokens[i];
       }
-      incrementToken();
+      if (!token) throw new EndOfLineError(allTokens, "]");
+      token = getNextToken();
       node.end = i;
-      return node;
     }
 
-    let node = parseTerminal();
+    if (!node) {
+      node = parseTerminal();
+    }
 
-    // @ts-ignore
-    if (node.type === "Identifier" && token.type === "leftParen") {
+    // Call Expression
+    if (node.type === "Identifier" && token?.type === "leftParen") {
       node = {
         type: "CallExpression",
         callee: node,
@@ -106,32 +128,44 @@ export const buildAST = (allTokens: Token[]): AST => {
         start: node.start,
         end: -1,
       };
-      incrementToken();
-      while (token.type !== "rightParen") {
+      token = getNextToken();
+      while (token && token.type !== "rightParen") {
         if (token.type === "comma") {
-          incrementToken();
-          continue;
+          token = getNextToken();
+        } else {
+          node.arguments.push(parseExpression());
+          if (token && !["comma", "rightParen"].includes(token.type)) {
+            throw new UnexpectedTokenError(allTokens, token);
+          }
         }
-        node.arguments.push(parseExpression());
       }
+      if (!token) throw new EndOfLineError(allTokens, ")");
       node.end = token.end;
-      return node;
+      token = getNextToken();
     }
 
+    // Binary Expression
     while (token?.type === "operator") {
-      const start = node.start;
+      const start: number = node.start;
       const operator = token.value;
-      const left = node;
-      incrementToken();
-      const nextOperator = next.type === "operator" ? next.value : null;
+      const left: AST = node;
+      token = getNextToken();
+      const next = token?.next;
+      const nextOperator = next?.type === "operator" ? next.value : null;
+
       const rightTerminalRules = [
-        ADDSUB.test(operator) && nextOperator && ADDSUB.test(nextOperator), // E = T +- T +- E
-        MULDIV.test(operator) && nextOperator, // E = T */ T */+- E
+        // E = T +- T +- E
+        ADDSUB.test(operator) && nextOperator && ADDSUB.test(nextOperator),
+        // E = T */ T */+- E
+        MULDIV.test(operator) && nextOperator,
       ];
+
       const right = rightTerminalRules.some(Boolean)
         ? parseTerminal()
         : parseExpression();
+
       const end = right.end;
+
       node = {
         type: "BinaryExpression",
         operator,
@@ -142,19 +176,42 @@ export const buildAST = (allTokens: Token[]): AST => {
       };
     }
 
-    if (token.type === "rightParen") {
-      incrementToken();
-    }
-
     return node;
   }
 };
 
-class TokenError extends Error {
-  constructor(token: Token, allTokens: Token[]) {
+export class ParseError extends Error {
+  constructor(allTokens: Token[], token: Token | null, message: string) {
     super();
+    const padEnd =
+      (token && token.start + 1) || allTokens[allTokens.length - 1].end;
     const originalCode = allTokens.map(t => t.raw || t.value).join("");
-    const leftPadding = Array.from(new Array(token.end)).join(" ");
-    this.message = `Invalid token ${token.value}\n\n${originalCode}\n${leftPadding}^`;
+    const leftPadding = Array.from(new Array(padEnd)).join(" ");
+    this.message = `${message}\n\n${originalCode}\n${leftPadding}^`;
+    Object.setPrototypeOf(this, ParseError.prototype);
+  }
+}
+
+export class UnknownTokenError extends ParseError {
+  constructor(allTokens: Token[], token: Token) {
+    super(allTokens, token, `Invalid token ${token.value}`);
+    Object.setPrototypeOf(this, UnknownTokenError.prototype);
+  }
+}
+
+export class UnexpectedTokenError extends ParseError {
+  constructor(allTokens: Token[], token: Token) {
+    super(allTokens, token, `Unexpecpted token ${token.value}`);
+    Object.setPrototypeOf(this, UnexpectedTokenError.prototype);
+  }
+}
+
+export class EndOfLineError extends ParseError {
+  constructor(allTokens: Token[], expectedToken?: string) {
+    const message = expectedToken
+      ? `Expected ${expectedToken}`
+      : `Unexpected end of line`;
+    super(allTokens, null, message);
+    Object.setPrototypeOf(this, EndOfLineError.prototype);
   }
 }
