@@ -86,8 +86,10 @@ export const buildAST = (allTokens: Token[]): AST | null => {
     if (token?.type === "leftParen") {
       token = getNextToken();
       node = parseExpression();
-      if (!token || token?.type !== "rightParen") {
+      if (!token) {
         throw new EndOfLineError(allTokens, ")");
+      } else if (token?.type !== "rightParen") {
+        throw new UnexpectedTokenError(allTokens, token);
       } else {
         token = getNextToken();
       }
@@ -201,7 +203,7 @@ export class UnknownTokenError extends ParseError {
 
 export class UnexpectedTokenError extends ParseError {
   constructor(allTokens: Token[], token: Token) {
-    super(allTokens, token, `Unexpecpted token ${token.value}`);
+    super(allTokens, token, `Unexpected token ${token.value}`);
     Object.setPrototypeOf(this, UnexpectedTokenError.prototype);
   }
 }
