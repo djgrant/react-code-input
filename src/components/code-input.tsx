@@ -1,7 +1,7 @@
 import React, { InputHTMLAttributes } from "react";
 import { CSSProperties } from "react";
 import { Hints } from "./hints";
-import { getTokens, getEditorTokens } from "../compiler";
+import { getTokens, getEditorTokens, buildAST } from "../compiler";
 import { Token, EditorToken } from "../compiler/types";
 import { styles, getComputedStyles, getTokenStyles } from "./styles";
 
@@ -45,6 +45,24 @@ export function CodeInput(props: CodeInputProps) {
 
   const inputRef = React.createRef<HTMLInputElement>();
   const tokenRefs = tokens.map(() => React.createRef<HTMLDivElement>());
+
+  React.useEffect(() => {
+    const errors = tokens
+      .filter(t => !t.valid)
+      .map(t => new Error(`Cannot find identifier ${t.value}`));
+
+    try {
+      buildAST(sourceTokens);
+    } catch (err) {
+      errors.push(err);
+    }
+
+    if (errors.length) {
+      inputRef.current?.setCustomValidity(errors[0].message);
+    } else {
+      inputRef.current?.setCustomValidity("");
+    }
+  }, [tokens, inputRef]);
 
   const nativeInputSet = <T extends {}>(method: string, value: T) =>
     Object.getOwnPropertyDescriptor(

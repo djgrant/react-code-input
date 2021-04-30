@@ -17,9 +17,14 @@ input::placeholder {
   border: none;
   border-radius: 5px;
   background: #eee;
+  transition: 0.2s box-shadow ease;
 }
 
 .input:focus {
   outline: 2px solid transparent;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+}
+
+.input:invalid {
+  box-shadow: 0 0 0 3px rgba(255, 24, 24, 0.4);
 }
