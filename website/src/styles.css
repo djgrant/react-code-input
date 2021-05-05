@@ -2,6 +2,35 @@
   box-sizing: border-box;
 }
 
+html {
+  font-family: sans-serif;
+  font-size: 16px;
+}
+
+h1 {
+  font-size: 40px;
+  letter-spacing: -1px;
+}
+
+a {
+  text-decoration: none;
+  color: rgb(0, 112, 230);
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+small {
+  font-size: 11px;
+  color: #999;
+}
+
+.container {
+  max-width: 750px;
+  margin: 0 auto;
+}
+
 input::placeholder {
   color: #999;
 }
@@ -32,4 +61,13 @@ input::placeholder {
 
 .input:invalid:focus {
   box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.08);
+}
+
+.parser-results {
+  margin-top: 30px;
+  padding: 24px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  background: #eee;
+  font-size: 14px;
 }
