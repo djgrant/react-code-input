@@ -36,6 +36,7 @@ export const buildAST = (allTokens: Token[]): AST | null => {
       const node: AST = {
         type: "Literal",
         value: Number(token.value),
+        raw: token.value,
         start: token.start,
         end: token.end,
       };
@@ -47,6 +48,7 @@ export const buildAST = (allTokens: Token[]): AST | null => {
       const node: AST = {
         type: "Literal",
         value: token.value,
+        raw: token.value,
         start: token.start,
         end: token.end,
       };
@@ -58,6 +60,7 @@ export const buildAST = (allTokens: Token[]): AST | null => {
       const node: AST = {
         type: "Literal",
         value: token.value === "true" ? true : false,
+        raw: token.value,
         start: token.start,
         end: token.end,
       };

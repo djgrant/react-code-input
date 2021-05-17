@@ -57,6 +57,7 @@ export interface CallExpression extends ASTNode {
 export interface Literal extends ASTNode {
   type: "Literal";
   value: string | boolean | number;
+  raw: string;
 }
 
 export interface Identifier extends ASTNode {
