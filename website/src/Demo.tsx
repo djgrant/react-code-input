@@ -40,7 +40,7 @@ export const Demo = () => {
         }}
       />
       <small>
-        Tip: type <strong>ctrl + a</strong> to get started
+        Tip: press <strong>ctrl + space</strong> to trigger autocomplete
       </small>
       <pre className="parser-results">
         <>
